@@ -3,6 +3,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/go-logr/logr"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 
 	"github.com/jaconi-io/okta-operator/okta"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -23,9 +26,11 @@ const (
 type TrustedOriginReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 func (r *TrustedOriginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := ctrllog.FromContext(ctx)
 	ingress := &networkingv1.Ingress{}
 	err := r.Get(ctx, req.NamespacedName, ingress)
 	if err != nil {
@@ -43,7 +48,11 @@ func (r *TrustedOriginReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("missing annotation %q for ingress %q", annotationTrustedOrigin, req.NamespacedName)
 	}
 
+	// Sleep to make sure Okta replication has happened
+	time.Sleep(2 * time.Second)
+
 	isTrustedOrigin, err := okta.IsTrustedOrigin(origin)
+	log.Info("Queried trusted origin", "isTrustedOrigin", isTrustedOrigin)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to determine if %q (from ingress %q) is a trusted origin: %w", origin, req.NamespacedName, err)
 	}
@@ -52,7 +61,9 @@ func (r *TrustedOriginReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if ingress.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(ingress, finalizerTrustedOrigin) {
 			if isTrustedOrigin {
+				log.Info("Deleting trusted origin")
 				err = okta.DeleteTrustedOrigin(origin)
+
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to delete trusted origin %q (from ingress %q): %w", origin, req.NamespacedName, err)
 				}
@@ -68,22 +79,23 @@ func (r *TrustedOriginReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	// Nothing to do if origin is already trusted.
-	if isTrustedOrigin {
-		return ctrl.Result{}, nil
-	}
-
-	err = okta.CreateTrustedOrigin(origin)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create trusted origin %q for ingress %q: %w", origin, req.NamespacedName, err)
-	}
-
 	if !controllerutil.ContainsFinalizer(ingress, finalizerTrustedOrigin) {
 		controllerutil.AddFinalizer(ingress, finalizerTrustedOrigin)
 		err = r.Update(ctx, ingress)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to add finalizer %q to ingress %q: %w", finalizerTrustedOrigin, req.NamespacedName, err)
 		}
+	}
+
+	// Nothing to do if origin is already trusted.
+	if isTrustedOrigin {
+		return ctrl.Result{}, nil
+	}
+
+	log.Info("Creating trusted origin")
+	err = okta.CreateTrustedOrigin(origin)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create trusted origin %q for ingress %q: %w", origin, req.NamespacedName, err)
 	}
 
 	return ctrl.Result{}, nil
@@ -98,6 +110,7 @@ func (r *TrustedOriginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&networkingv1.Ingress{}).
+		Named("trustedOrigin").
 		WithEventFilter(predicate.NewPredicateFuncs(hasAnnotation)).
 		Complete(r)
 }

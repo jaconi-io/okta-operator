@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 
 	"github.com/jaconi-io/okta-operator/okta"
 
@@ -21,6 +23,8 @@ import (
 const (
 	finalizerApplication  = "okta.jaconi.io/application"
 	annotationApplication = "okta.jaconi.io/application"
+
+	oktaClientSecretName = "okta-client"
 )
 
 // ApplicationReconciler manages Okta applications for annotated ingress resources.
@@ -31,6 +35,7 @@ type ApplicationReconciler struct {
 }
 
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := ctrllog.FromContext(ctx)
 	ingress := &networkingv1.Ingress{}
 	err := r.Get(ctx, req.NamespacedName, ingress)
 	if err != nil {
@@ -48,7 +53,11 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("missing annotation %q for ingress %q", annotationApplication, req.NamespacedName)
 	}
 
+	// Sleep to make sure Okta replication has happened
+	time.Sleep(2 * time.Second)
+
 	app, err := okta.GetApplicationByLabel(application)
+	log.Info("Queried application", "applicationExists", app != nil)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get application %q: %w", application, err)
 	}
@@ -56,7 +65,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// Handle deletion first.
 	if ingress.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(ingress, finalizerApplication) {
-			if app == nil {
+			if app != nil {
+				log.Info("Deleting application")
 				err = okta.DeleteApplication(app)
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("failed to delete application %q: %w", application, err)
@@ -73,7 +83,16 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, nil
 	}
 
+	if !controllerutil.ContainsFinalizer(ingress, finalizerApplication) {
+		controllerutil.AddFinalizer(ingress, finalizerApplication)
+		err = r.Update(ctx, ingress)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to add finalizer %q to ingress %q: %w", finalizerApplication, req.NamespacedName, err)
+		}
+	}
+
 	if app == nil {
+		log.Info("Creating application")
 		app, err = okta.CreateApplication(application)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to create application %q for ingress %q: %w", application, req.NamespacedName, err)
@@ -81,10 +100,11 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else {
 		// The application has already been created in Okta. Check if we have the client credentials for the application.
 		secret := &core.Secret{}
-		err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: "okta-client"}, secret)
+		err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: oktaClientSecretName}, secret)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// The secret does not exist, and we do not have the credentials at hand. Create a new secret.
+				log.Info("Rotating application secret")
 				clientSecret, err := okta.NewSecret(app.ClientID)
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("could not rotate secret for application %q: %w", application, err)
@@ -102,28 +122,23 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	if !controllerutil.ContainsFinalizer(ingress, finalizerApplication) {
-		controllerutil.AddFinalizer(ingress, finalizerApplication)
-		err = r.Update(ctx, ingress)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to add finalizer %q to ingress %q: %w", finalizerApplication, req.NamespacedName, err)
+	// If we have a new ClientSecret, create or update the K8s secret
+	if app.ClientSecret != "" {
+		secret := &core.Secret{
+			ObjectMeta: meta.ObjectMeta{
+				Name:      oktaClientSecretName,
+				Namespace: req.Namespace,
+			},
 		}
-	}
+		_, err = controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+			secret.StringData = map[string]string{
+				"OKTA_CLIENT_ID":     app.ClientID,
+				"OKTA_CLIENT_SECRET": app.ClientSecret,
+			}
 
-	secret := &core.Secret{
-		ObjectMeta: meta.ObjectMeta{
-			Name:      "okta-client",
-			Namespace: req.Namespace,
-		},
+			return nil
+		})
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
-		secret.StringData = map[string]string{
-			"OKTA_CLIENT_ID":     app.ClientID,
-			"OKTA_CLIENT_SECRET": app.ClientSecret,
-		}
-
-		return nil
-	})
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create / update secret for application %q: %w", application, err)
 	}
@@ -140,6 +155,7 @@ func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&networkingv1.Ingress{}).
+		Named("application").
 		Owns(&core.Secret{}).
 		WithEventFilter(predicate.NewPredicateFuncs(hasAnnotation)).
 		Complete(r)

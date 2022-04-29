@@ -2,11 +2,12 @@ package okta
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-
 	"github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"io"
+	"strings"
 )
 
 // Application described an Okta application without exposing Okta types outside of this package.
@@ -21,7 +22,10 @@ func CreateApplicationGroupAssignment(app *Application, groupID string) error {
 
 	assignments, _, err := client.Application.GetApplicationGroupAssignment(ctx, app.ID, groupID, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get application group assignment for application %q and group %q: %w", app.ID, groupID, err)
+		var e *okta.Error
+		if !(errors.As(err, &e) && strings.HasPrefix(e.ErrorSummary, "Not found")) {
+			return fmt.Errorf("failed to get application group assignment for application %q and group %q: %w", app.ID, groupID, err)
+		}
 	}
 
 	if assignments == nil {
@@ -84,15 +88,15 @@ func CreateApplication(label string) (*Application, error) {
 	grantTypeAuthorizationCode := okta.OAuthGrantType("authorization_code")
 	app.Settings = &okta.OpenIdConnectApplicationSettings{
 		OauthClient: &okta.OpenIdConnectApplicationSettingsClient{
-			ClientUri: fmt.Sprintf("https://%s.zageno.com", label),
+			ClientUri: fmt.Sprintf("https://%s.feature.zageno.com", label),
 			LogoUri:   "",
 			RedirectUris: []string{
-				fmt.Sprintf("https://%s.zageno.com/oauth2/callback", label),
-				fmt.Sprintf("https://%s-admin.zageno.com/oauth2/callback", label),
+				fmt.Sprintf("https://%s.feature.zageno.com/oauth2/callback", label),
+				fmt.Sprintf("https://%s-admin.feature.zageno.com/oauth2/callback", label),
 			},
 			PostLogoutRedirectUris: []string{
-				fmt.Sprintf("https://%s.zageno.com", label),
-				fmt.Sprintf("https://%s-admin.zageno.com", label),
+				fmt.Sprintf("https://%s.feature.zageno.com", label),
+				fmt.Sprintf("https://%s-admin.feature.zageno.com", label),
 			},
 			ResponseTypes:   []*okta.OAuthResponseType{&responseType},
 			GrantTypes:      []*okta.OAuthGrantType{&grantTypeRefreshToken, &grantTypeAuthorizationCode},

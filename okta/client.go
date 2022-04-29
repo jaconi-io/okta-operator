@@ -22,6 +22,7 @@ func getContextAndClient() (context.Context, *okta.Client) {
 		var err error
 		ctx, client, err = okta.NewClient(
 			context.Background(),
+			okta.WithCache(false),
 		)
 		if err != nil {
 			panic(fmt.Errorf("error while initializing Okta client: %w", err))
