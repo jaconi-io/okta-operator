@@ -50,11 +50,13 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var groupID string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&groupID, "group-id", "", "The group ID of the group the applications created by this operator will be assigned to.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -76,11 +78,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.IngressReconciler{
+	if err = (&controllers.ApplicationReconciler{
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		GroupID: groupID,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "application")
+		os.Exit(1)
+	}
+
+	if err = (&controllers.TrustedOriginReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Ingress")
+		setupLog.Error(err, "unable to create controller", "controller", "trusted-origin")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
