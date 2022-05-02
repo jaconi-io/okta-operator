@@ -23,7 +23,7 @@ import (
 	"github.com/jaconi-io/okta-operator/okta"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,7 +33,9 @@ import (
 )
 
 const (
-	finalizerOktaClient = "okta.jaconi.io/oktaClient"
+	finalizerOktaClient        = "okta.jaconi.io/oktaClient"
+	ConditionTypeSynced string = "Ready"
+	ConditionTypeError  string = "Error"
 )
 
 // OktaClientReconciler reconciles a OktaClient object
@@ -217,7 +219,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 	// If we have a new ClientSecret, create or update the K8s secret
 	if app.ClientSecret != "" {
 		secret := &core.Secret{
-			ObjectMeta: meta.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
 				Namespace: req.Namespace,
 			},
