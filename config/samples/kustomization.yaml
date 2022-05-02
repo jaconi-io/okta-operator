@@ -1,4 +1,4 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-- networking_v1_ingress.yaml
+- okta_v1alpha1_oktaclient.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

@@ -7,15 +7,13 @@ plugins:
 projectName: okta-operator
 repo: github.com/jaconi-io/okta-operator
 resources:
-- controller: true
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
   domain: jaconi.io
-  group: networking.k8s.io
-  kind: Ingress
-  version: v1
-- controller: true
-  domain: k8s.io
-  group: networking
-  kind: Ingress
-  path: k8s.io/api/networking/v1
-  version: v1
+  group: okta
+  kind: OktaClient
+  path: github.com/jaconi-io/okta-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

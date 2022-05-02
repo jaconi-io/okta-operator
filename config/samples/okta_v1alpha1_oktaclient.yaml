@@ -1,0 +1,6 @@
+apiVersion: okta.jaconi.io/v1alpha1
+kind: OktaClient
+metadata:
+  name: oktaclient-sample
+spec:
+  # TODO(user): Add fields here

@@ -1,22 +1,9 @@
----
+# permissions for end users to edit oktaclients.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: manager-role
+  name: oktaclient-editor-role
 rules:
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - okta.jaconi.io
   resources:
@@ -32,14 +19,6 @@ rules:
 - apiGroups:
   - okta.jaconi.io
   resources:
-  - oktaclients/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - okta.jaconi.io
-  resources:
   - oktaclients/status
   verbs:
   - get
-  - patch
-  - update
