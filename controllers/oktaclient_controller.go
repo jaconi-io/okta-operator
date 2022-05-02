@@ -111,9 +111,15 @@ func (r *OktaClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *OktaClientReconciler) cleanUp(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request) error {
 	// Delete App
-	r.deleteApplication(oktaClient, ctx)
+	err := r.deleteApplication(oktaClient, ctx)
+	if err != nil {
+		return err
+	}
 
 	// Delete trusted origins
-	r.deleteTrustedOrigins(oktaClient, ctx)
+	err = r.deleteTrustedOrigins(oktaClient, ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
