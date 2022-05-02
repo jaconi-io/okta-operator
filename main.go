@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	oktav1alpha1 "github.com/jaconi-io/okta-operator/api/v1alpha1"
 	"github.com/jaconi-io/okta-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
@@ -43,6 +44,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(oktav1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -78,20 +80,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.ApplicationReconciler{
-		Client:  mgr.GetClient(),
-		Scheme:  mgr.GetScheme(),
-		GroupID: groupID,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "application")
-		os.Exit(1)
-	}
-
-	if err = (&controllers.TrustedOriginReconciler{
+	if err = (&controllers.OktaClientReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "trusted-origin")
+		setupLog.Error(err, "unable to create controller", "controller", "OktaClient")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

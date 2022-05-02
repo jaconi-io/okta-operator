@@ -71,7 +71,7 @@ func GetApplicationByLabel(label string) (*Application, error) {
 }
 
 // CreateApplication in Okta and return it.
-func CreateApplication(label string) (*Application, error) {
+func CreateApplication(label string, clientUri string, redirectUris []string, postLogoutRedirectUris []string) (*Application, error) {
 	ctx, client := getContextAndClient()
 
 	app := okta.NewOpenIdConnectApplication()
@@ -88,20 +88,14 @@ func CreateApplication(label string) (*Application, error) {
 	grantTypeAuthorizationCode := okta.OAuthGrantType("authorization_code")
 	app.Settings = &okta.OpenIdConnectApplicationSettings{
 		OauthClient: &okta.OpenIdConnectApplicationSettingsClient{
-			ClientUri: fmt.Sprintf("https://%s.feature.zageno.com", label),
-			LogoUri:   "",
-			RedirectUris: []string{
-				fmt.Sprintf("https://%s.feature.zageno.com/oauth2/callback", label),
-				fmt.Sprintf("https://%s-admin.feature.zageno.com/oauth2/callback", label),
-			},
-			PostLogoutRedirectUris: []string{
-				fmt.Sprintf("https://%s.feature.zageno.com", label),
-				fmt.Sprintf("https://%s-admin.feature.zageno.com", label),
-			},
-			ResponseTypes:   []*okta.OAuthResponseType{&responseType},
-			GrantTypes:      []*okta.OAuthGrantType{&grantTypeRefreshToken, &grantTypeAuthorizationCode},
-			ConsentMethod:   "REQUIRED",
-			ApplicationType: "web",
+			ClientUri:              clientUri,
+			LogoUri:                "",
+			RedirectUris:           redirectUris,
+			PostLogoutRedirectUris: postLogoutRedirectUris,
+			ResponseTypes:          []*okta.OAuthResponseType{&responseType},
+			GrantTypes:             []*okta.OAuthGrantType{&grantTypeRefreshToken, &grantTypeAuthorizationCode},
+			ConsentMethod:          "REQUIRED",
+			ApplicationType:        "web",
 		},
 	}
 
