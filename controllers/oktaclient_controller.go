@@ -33,8 +33,7 @@ import (
 )
 
 const (
-	finalizerOktaClient  = "okta.jaconi.io/oktaClient"
-	oktaClientSecretName = "okta-client"
+	finalizerOktaClient = "okta.jaconi.io/oktaClient"
 )
 
 // OktaClientReconciler reconciles a OktaClient object
@@ -179,6 +178,7 @@ func (r *OktaClientReconciler) updateTrustedOrigins(oktaClient *oktav1alpha1.Okt
 func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request) error {
 	// Update application
 	log := ctrllog.FromContext(ctx)
+	secretName := oktaClient.Name
 	appName := oktaClient.Spec.Name
 	clientUri := oktaClient.Spec.ClientUri
 	redirectUris := oktaClient.Spec.RedirectUris
@@ -200,7 +200,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 	} else {
 		// The application has already been created in Okta. Check if we have the client credentials for the application.
 		secret := &core.Secret{}
-		err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: oktaClientSecretName}, secret)
+		err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: secretName}, secret)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// The secret does not exist, and we do not have the credentials at hand. Create a new secret.
@@ -218,7 +218,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 	if app.ClientSecret != "" {
 		secret := &core.Secret{
 			ObjectMeta: meta.ObjectMeta{
-				Name:      oktaClientSecretName,
+				Name:      secretName,
 				Namespace: req.Namespace,
 			},
 		}
