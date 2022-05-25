@@ -5,16 +5,21 @@ import (
 	"fmt"
 	oktav1alpha1 "github.com/jaconi-io/okta-operator/api/v1alpha1"
 	"github.com/jaconi-io/okta-operator/okta"
-	ctrl "sigs.k8s.io/controller-runtime"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *OktaClientReconciler) updateTrustedOrigins(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request) error {
+var (
+	isTrustedOrigin     = okta.IsTrustedOrigin
+	createTrustedOrigin = okta.CreateTrustedOrigin
+	deleteTrustedOrigin = okta.DeleteTrustedOrigin
+)
+
+func updateTrustedOrigins(oktaClient *oktav1alpha1.OktaClient, ctx context.Context) error {
 	// Create trusted origins
 	log := ctrllog.FromContext(ctx)
 	origins := oktaClient.Spec.TrustedOrigins
 	for _, origin := range origins {
-		isTrustedOrigin, err := okta.IsTrustedOrigin(origin)
+		isTrustedOrigin, err := isTrustedOrigin(origin)
 		log.Info("Queried trusted origin", "origin", origin, "exists", isTrustedOrigin)
 		if err != nil {
 			return fmt.Errorf("failed to determine if %q is a trusted origin: %w", origin, err)
@@ -24,7 +29,7 @@ func (r *OktaClientReconciler) updateTrustedOrigins(oktaClient *oktav1alpha1.Okt
 			continue
 		}
 		log.Info("Creating trusted origin", "origin", origin)
-		err = okta.CreateTrustedOrigin(origin)
+		err = createTrustedOrigin(origin)
 
 		if err != nil {
 			return fmt.Errorf("failed to create trusted origin %q: %w", origin, err)
@@ -34,18 +39,18 @@ func (r *OktaClientReconciler) updateTrustedOrigins(oktaClient *oktav1alpha1.Okt
 	return nil
 }
 
-func (r *OktaClientReconciler) deleteTrustedOrigins(oktaClient *oktav1alpha1.OktaClient, ctx context.Context) error {
+func deleteTrustedOrigins(oktaClient *oktav1alpha1.OktaClient, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	origins := oktaClient.Spec.TrustedOrigins
 	for _, origin := range origins {
-		isTrustedOrigin, err := okta.IsTrustedOrigin(origin)
+		isTrustedOrigin, err := isTrustedOrigin(origin)
 		log.Info("Queried trusted origin", "origin", origin, "exists", isTrustedOrigin)
 		if err != nil {
 			return fmt.Errorf("failed to determine if %q is a trusted origin: %w", origin, err)
 		}
 		if isTrustedOrigin {
 			log.Info("Deleting trusted origin", "origin", origin)
-			err = okta.DeleteTrustedOrigin(origin)
+			err = deleteTrustedOrigin(origin)
 
 			if err != nil {
 				return fmt.Errorf("failed to delete trusted origin %q: %w", origin, err)
