@@ -25,7 +25,7 @@ var (
 	getSecret             = getSecretImpl
 )
 
-func updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request, k8sClient client.Client) error {
+func updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request, kubernetesClient client.Client) error {
 	// Update application
 	log := ctrllog.FromContext(ctx)
 	secretName := oktaClient.Name
@@ -49,7 +49,7 @@ func updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context,
 		}
 	} else {
 		// The application has already been created in Okta. Check if we have the client credentials for the application.
-		err := getSecret(k8sClient, ctx, req, secretName)
+		err := getSecret(kubernetesClient, ctx, req, secretName)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// The secret does not exist, and we do not have the credentials at hand. Create a new secret.
@@ -71,7 +71,7 @@ func updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context,
 				Namespace: req.Namespace,
 			},
 		}
-		_, err = createOrUpdateSecret(ctx, k8sClient, secret, func() error {
+		_, err = createOrUpdateSecret(ctx, kubernetesClient, secret, func() error {
 			secret.StringData = map[string]string{
 				"OKTA_CLIENT_ID":     app.ClientID,
 				"OKTA_CLIENT_SECRET": app.ClientSecret,
