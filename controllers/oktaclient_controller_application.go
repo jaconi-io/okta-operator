@@ -10,11 +10,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request) error {
+var (
+	getAppByLabel         = okta.GetApplicationByLabel
+	createApp             = okta.CreateApplication
+	deleteApp             = okta.DeleteApplication
+	newSecret             = okta.NewSecret
+	createGroupAssignment = okta.CreateApplicationGroupAssignment
+	createOrUpdateSecret  = controllerutil.CreateOrUpdate
+	getSecret             = getSecretImpl
+)
+
+func updateApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request, kubernetesClient client.Client) error {
 	// Update application
 	log := ctrllog.FromContext(ctx)
 	secretName := oktaClient.Name
@@ -24,7 +35,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 	postLogoutRedirectUris := oktaClient.Spec.PostLogoutRedirectUris
 	groupId := oktaClient.Spec.GroupId
 
-	app, err := okta.GetApplicationByLabel(appName)
+	app, err := getAppByLabel(appName)
 	log.Info("Queried application", "application", appName, "exists", app != nil)
 	if err != nil {
 		return fmt.Errorf("failed to get application %q: %w", appName, err)
@@ -32,19 +43,18 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 
 	if app == nil {
 		log.Info("Creating application", "application", appName)
-		app, err = okta.CreateApplication(appName, clientUri, redirectUris, postLogoutRedirectUris)
+		app, err = createApp(appName, clientUri, redirectUris, postLogoutRedirectUris)
 		if err != nil {
 			return fmt.Errorf("failed to create application %q: %w", appName, err)
 		}
 	} else {
 		// The application has already been created in Okta. Check if we have the client credentials for the application.
-		secret := &core.Secret{}
-		err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: secretName}, secret)
+		err := getSecret(kubernetesClient, ctx, req, secretName)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// The secret does not exist, and we do not have the credentials at hand. Create a new secret.
 				log.Info("Rotating application secret")
-				clientSecret, err := okta.NewSecret(app.ClientID)
+				clientSecret, err := newSecret(app.ClientID)
 				if err != nil {
 					return fmt.Errorf("could not rotate secret for application %q: %w", appName, err)
 				}
@@ -61,7 +71,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 				Namespace: req.Namespace,
 			},
 		}
-		_, err = controllerutil.CreateOrUpdate(ctx, r.Client, secret, func() error {
+		_, err = createOrUpdateSecret(ctx, kubernetesClient, secret, func() error {
 			secret.StringData = map[string]string{
 				"OKTA_CLIENT_ID":     app.ClientID,
 				"OKTA_CLIENT_SECRET": app.ClientSecret,
@@ -76,7 +86,7 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 
 	if groupId != "" {
 		log.Info("Creating application/group assignment", "application", appName, "groupId", groupId)
-		err = okta.CreateApplicationGroupAssignment(app, groupId)
+		err = createGroupAssignment(app, groupId)
 		if err != nil {
 			return fmt.Errorf("failed to add application %q to group %q: %w", appName, groupId, err)
 		}
@@ -85,10 +95,14 @@ func (r *OktaClientReconciler) updateApplication(oktaClient *oktav1alpha1.OktaCl
 	return nil
 }
 
-func (r *OktaClientReconciler) deleteApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context) error {
+func getSecretImpl(k8sClient client.Client, ctx context.Context, req ctrl.Request, secretName string) error {
+	return k8sClient.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: secretName}, &core.Secret{})
+}
+
+func deleteApplication(oktaClient *oktav1alpha1.OktaClient, ctx context.Context) error {
 	log := ctrllog.FromContext(ctx)
 	appName := oktaClient.Spec.Name
-	app, err := okta.GetApplicationByLabel(appName)
+	app, err := getAppByLabel(appName)
 
 	log.Info("Queried application", "appName", appName, "exists", app != nil)
 	if err != nil {
@@ -97,7 +111,7 @@ func (r *OktaClientReconciler) deleteApplication(oktaClient *oktav1alpha1.OktaCl
 
 	if app != nil {
 		log.Info("Deleting application", "appName", appName)
-		err = okta.DeleteApplication(app)
+		err = deleteApp(app)
 		if err != nil {
 			return fmt.Errorf("failed to delete application %q: %w", appName, err)
 		}

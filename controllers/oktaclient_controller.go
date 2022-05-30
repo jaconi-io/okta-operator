@@ -87,12 +87,12 @@ func (r *OktaClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	err = r.updateTrustedOrigins(oktaClient, ctx, req)
+	err = updateTrustedOrigins(oktaClient, ctx)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create or update the trusted origins %q: %w", req.NamespacedName, err)
 	}
 
-	err = r.updateApplication(oktaClient, ctx, req)
+	err = updateApplication(oktaClient, ctx, req, r.Client)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create or update application %q: %w", req.NamespacedName, err)
 	}
@@ -111,13 +111,13 @@ func (r *OktaClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *OktaClientReconciler) cleanUp(oktaClient *oktav1alpha1.OktaClient, ctx context.Context, req ctrl.Request) error {
 	// Delete App
-	err := r.deleteApplication(oktaClient, ctx)
+	err := deleteApplication(oktaClient, ctx)
 	if err != nil {
 		return err
 	}
 
 	// Delete trusted origins
-	err = r.deleteTrustedOrigins(oktaClient, ctx)
+	err = deleteTrustedOrigins(oktaClient, ctx)
 	if err != nil {
 		return err
 	}
