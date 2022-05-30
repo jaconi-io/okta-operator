@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"github.com/jaconi-io/okta-operator/api/v1alpha1"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
