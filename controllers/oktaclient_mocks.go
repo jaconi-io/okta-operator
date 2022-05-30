@@ -10,10 +10,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+type stringSlice []string
+
 var testOktaClients = make(map[string]*okta.Application)
-var testTrustedOrigins = []string{}
+var testTrustedOrigins = stringSlice{}
 var appsCreated = 0
+var appsDeleted = 0
 var trustedOriginsCreated = 0
+var trustedOriginsDeleted = 0
 
 var testAppClient = v1alpha1.OktaClient{
 	TypeMeta:   metav1.TypeMeta{},
@@ -25,12 +29,18 @@ var testAppClient = v1alpha1.OktaClient{
 }
 
 var testApp = okta.Application{
-	ID:           "xyz",
+	ID:           "test-client",
 	ClientID:     "id",
 	ClientSecret: "secret",
 }
 
 var testRequest = controllerruntime.Request{}
+
+func deleteAppMock(app *okta.Application) error {
+	appsDeleted++
+	delete(testOktaClients, app.ID)
+	return nil
+}
 
 func appCreatorMock(label string, clientUri string, redirectUris []string, postLogoutRedirectUris []string) (*okta.Application, error) {
 	appsCreated++
@@ -71,6 +81,28 @@ func addTestTrustedOrigin(origin string) error {
 	return nil
 }
 
+func removeIndex(s []string, index int) []string {
+	return append(s[:index], s[index+1:]...)
+}
+
+func pos(s []string, value string) int {
+	for p, v := range s {
+		if v == value {
+			return p
+		}
+	}
+	return -1
+}
+
+func deleteTrustedOriginMock(origin string) error {
+	trustedOriginsDeleted++
+	pos := pos(testTrustedOrigins, origin)
+	if pos >= 0 {
+		testTrustedOrigins = removeIndex(testTrustedOrigins, pos)
+	}
+	return nil
+}
+
 func isTrustedMock(origin string) (bool, error) {
 	for _, s := range testTrustedOrigins {
 		if origin == s {
@@ -89,10 +121,14 @@ func reset() {
 	testTrustedOrigins = []string{}
 	isTrustedOrigin = isTrustedMock
 	createTrustedOrigin = addTrustedOriginMock
+	deleteTrustedOrigin = deleteTrustedOriginMock
 	getAppByLabel = getAppByLabelMock
+	deleteApp = deleteAppMock
 	createApp = appCreatorMock
 	appsCreated = 0
+	appsDeleted = 0
 	trustedOriginsCreated = 0
+	trustedOriginsDeleted = 0
 }
 
 func resetToLocal() {
