@@ -32,7 +32,7 @@ jobs:
     env:
       HELM_EXPERIMENTAL_OCI: 1 #enable OCI support
       HELM_VERSION_TO_INSTALL: 3.9.0 # version of HEL to install
-      GCR_IMAGE: ghcr.io/${{ github.repository }}-helm-chart
+      GCR_IMAGE: ghcr.io/${{ github.repository_owner }}/helm-charts
 
     steps:
       - uses: actions/checkout@v3
