@@ -60,6 +60,10 @@ func createOrUpdateSecretMock(ctx context.Context, c client.Client, obj client.O
 	return controllerutil.OperationResultNone, nil
 }
 
+func newSecretMock(clientID string) (string, error) {
+	return "secret", nil
+}
+
 var testToClient = v1alpha1.OktaClient{
 	TypeMeta:   metav1.TypeMeta{},
 	ObjectMeta: metav1.ObjectMeta{},
@@ -125,6 +129,7 @@ func reset() {
 	getAppByLabel = getAppByLabelMock
 	deleteApp = deleteAppMock
 	createApp = appCreatorMock
+	newSecret = newSecretMock
 	appsCreated = 0
 	appsDeleted = 0
 	trustedOriginsCreated = 0
