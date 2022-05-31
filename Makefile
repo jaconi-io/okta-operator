@@ -124,15 +124,20 @@ docker-build: build ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
+build-helm: generate manifests kustomize  ## Generate manifests to be deployed in the cluster
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	rm -rf helm
+	mkdir -p helm/templates
+	cd helm/templates && $(KUSTOMIZE) build ../../config/default | yq -s '("" + $$index) + "-" + (.kind | downcase)' -
+	cd helm/templates && sed -i '.bak' 's/okta-operator-system/{{ .Release.Namespace }}/g' *
+	cp hack/Chart.yaml helm
+	cd helm && sed -i '.bak' 's/0.0.1/$(VERSION)/g' Chart.yaml
+
 ##@ Deployment
 
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-
-build-helm: generate manifests
-	mkdir -p helm
-	kustomize build config/default | awk '{f="helm/" NR "_manifest.yaml"; print $0 > f}' RS='\n---\n'
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
