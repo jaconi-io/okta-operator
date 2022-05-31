@@ -44,3 +44,24 @@ The created app will be added to the group with the ID `abcdfgh`.
 To configure the Okta API client, see [https://github.com/okta/okta-sdk-golang#configuration-reference](https://github.com/okta/okta-sdk-golang#configuration-reference).
 
 The simplest solution is to provide two environment variables: `OKTA_CLIENT_TOKEN` and `OKTA_CLIENT_ORGURL`.
+
+This can be done by providing a ConfigMap and a Secret named `okta` within the Operator's namespace:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: okta
+data:
+  OKTA_CLIENT_TOKEN: c2VjcmV0
+type: Opaque
+```
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: okta
+data:
+  OKTA_CLIENT_ORGURL: "https://example.oktapreview.com"
+```

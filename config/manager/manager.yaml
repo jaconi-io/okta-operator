@@ -33,6 +33,11 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        envFrom:
+          - configMapRef:
+              name: okta
+          - secretRef:
+              name: okta
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
