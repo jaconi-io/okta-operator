@@ -25,3 +25,31 @@ jobs:
         run: make docker-build docker-push
         env:
           IMG: ghcr.io/${{ github.repository }}:${{ github.event.release.tag_name }}
+
+  helm:
+    name: Push Helm Chart
+    runs-on: ubuntu-latest
+    env:
+      HELM_EXPERIMENTAL_OCI: 1 #enable OCI support
+      HELM_VERSION_TO_INSTALL: 3.9.0 # version of HEL to install
+      GCR_IMAGE: ghcr.io/${{ github.repository }}-helm-chart
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install helm
+        uses: Azure/setup-helm@v1
+        with:
+          version: ${{ env.HELM_VERSION_TO_INSTALL }}
+
+      - name: login to ghcr using helm
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.GCR_IMAGE }} --username ${{ github.repository_owner }} --password-stdin
+
+      - name: save helm chart to local registry
+        run: |
+          helm chart save ${{ github.workspace }}/helm/ ${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
+
+      - name: publish chart to ghcr
+        run: |
+          helm chart push ${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
