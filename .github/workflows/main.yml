@@ -16,6 +16,10 @@ jobs:
           # See https://github.community/t/action-does-not-trigger-another-on-push-tag-action/17148
           token: ${{ secrets.SEMANTIC_RELEASE_GITHUB_TOKEN }}
 
+      - uses: freenet-actions/setup-yq@v1
+        with:
+          version: 4.25.1
+
       - uses: actions/setup-go@v3
         with:
           go-version: '>=1.18.0'
@@ -26,6 +30,7 @@ jobs:
         with:
           extra_plugins: |
             @semantic-release/exec
+            @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_GITHUB_TOKEN }}
           GITHUB_REPO: ${{ github.repository }}

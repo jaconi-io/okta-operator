@@ -129,9 +129,9 @@ build-helm: generate manifests kustomize  ## Generate manifests to be deployed i
 	rm -rf helm
 	mkdir -p helm/templates
 	cd helm/templates && $(KUSTOMIZE) build ../../config/default | yq -s '("" + $$index) + "-" + (.kind | downcase)' -
-	cd helm/templates && sed -i '.bak' 's/okta-operator-system/{{ .Release.Namespace }}/g' *
+	cd helm/templates && sed -i.bak 's/okta-operator-system/{{ .Release.Namespace }}/g' *
 	cp hack/Chart.yaml helm
-	cd helm && sed -i '.bak' 's/0.0.1/$(VERSION)/g' Chart.yaml
+	cd helm && sed -i.bak 's/0.0.1/$(VERSION)/g' Chart.yaml
 
 ##@ Deployment
 
