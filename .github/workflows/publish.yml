@@ -48,8 +48,8 @@ jobs:
 
       - name: save helm chart to local registry
         run: |
-          helm package ${{ github.workspace }}/helm/ ${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
+          helm package ${{ github.workspace }}/helm/
 
       - name: publish chart to ghcr
         run: |
-          helm push ${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
+          helm push okta-operator-${{ github.event.release.tag_name }}.tgz oci://${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
