@@ -132,6 +132,7 @@ build-helm: generate manifests kustomize  ## Generate manifests to be deployed i
 	cd helm/templates && sed -i.bak 's/okta-operator-system/{{ .Release.Namespace }}/g' *
 	cp hack/Chart.yaml helm
 	cd helm && sed -i.bak 's/0.0.1/$(VERSION)/g' Chart.yaml
+	cd helm && find . -name \*.bak -type f -delete
 
 ##@ Deployment
 
