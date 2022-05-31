@@ -54,4 +54,4 @@ jobs:
         run: |
           export CHART_NAME=$(grep 'name:' ./helm/Chart.yaml | tail -n1 | awk '{ print $2 }')
           export CHART_VERSION=$(grep 'version:' ./helm/Chart.yaml | tail -n1 | awk '{ print $2 }')
-          helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://${{ env.GCR_IMAGE }}:${{ github.event.release.tag_name }}
+          helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://${{ env.GCR_IMAGE }}

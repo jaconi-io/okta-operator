@@ -6,7 +6,7 @@ module.exports = {
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "make -s build-helm IMG=ghcr.io/${process.env.GITHUB_REPO}:${nextRelease.version} VERSION=${nextRelease.version}"
+        "prepareCmd": "make -s build-helm IMG=ghcr.io/${process.env.GITHUB_REPO}:v${nextRelease.version} VERSION=${nextRelease.version}"
       }
     ],
     [
