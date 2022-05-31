@@ -48,7 +48,7 @@ spec:
                 name: okta
             - secretRef:
                 name: okta
-          image: ghcr.io/jaconi-io/okta-operator:v1.5.4
+          image: ghcr.io/jaconi-io/okta-operator:v1.5.5
           livenessProbe:
             httpGet:
               path: /healthz
