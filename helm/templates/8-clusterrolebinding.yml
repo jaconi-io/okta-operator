@@ -2,11 +2,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: okta-operator-manager-rolebinding
+  name: okta-operator-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: okta-operator-manager-role
+  name: okta-operator-proxy-role
 subjects:
   - kind: ServiceAccount
     name: okta-operator-controller-manager

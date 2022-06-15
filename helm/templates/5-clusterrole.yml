@@ -2,9 +2,17 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: okta-operator-metrics-reader
+  name: okta-operator-proxy-role
 rules:
-  - nonResourceURLs:
-      - /metrics
+  - apiGroups:
+      - authentication.k8s.io
+    resources:
+      - tokenreviews
     verbs:
-      - get
+      - create
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create

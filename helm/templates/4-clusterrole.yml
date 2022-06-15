@@ -2,44 +2,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
-  name: okta-operator-manager-role
+  name: okta-operator-metrics-reader
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - okta.jaconi.io
-    resources:
-      - oktaclients
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - okta.jaconi.io
-    resources:
-      - oktaclients/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - okta.jaconi.io
-    resources:
-      - oktaclients/status
+  - nonResourceURLs:
+      - /metrics
     verbs:
       - get
-      - patch
-      - update
