@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/okta/okta-sdk-golang/v2 v2.18.0
-	github.com/onsi/ginkgo/v2 v2.9.3
+	github.com/onsi/ginkgo/v2 v2.9.4
 	github.com/onsi/gomega v1.27.6
 	k8s.io/api v0.27.1
 	k8s.io/apimachinery v0.27.1
