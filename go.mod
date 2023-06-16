@@ -6,9 +6,9 @@ require (
 	github.com/okta/okta-sdk-golang/v2 v2.19.0
 	github.com/onsi/ginkgo/v2 v2.10.0
 	github.com/onsi/gomega v1.27.8
-	k8s.io/api v0.27.2
-	k8s.io/apimachinery v0.27.2
-	k8s.io/client-go v0.27.2
+	k8s.io/api v0.27.3
+	k8s.io/apimachinery v0.27.3
+	k8s.io/client-go v0.27.3
 	sigs.k8s.io/controller-runtime v0.15.0
 )
 
