@@ -1,5 +1,7 @@
 # okta-operator
 
+> okta-operator will be archived on March 5, 2024.
+
 The [Okta](https://www.okta.com) operator creates Okta applications for OktaClient Custom Resources. The okta operator supports
 the following Custom Resource:
 
